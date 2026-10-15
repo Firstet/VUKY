@@ -1,0 +1,134 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+enum PlatformRole { SUPER_ADMIN SUPPORT }
+enum TenantStatus { ACTIVE SUSPENDED DISABLED }
+enum SubscriptionStatus { TRIALING ACTIVE PAST_DUE EXPIRED CANCELLED }
+enum GatewayProvider { PAYSTACK STRIPE CUSTOM }
+enum GatewayScope { PLATFORM TENANT }
+enum NoticeChannel { IN_APP EMAIL }
+enum NoticeStatus { PENDING SENT FAILED }
+
+model PlatformUser {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String
+  role PlatformRole @default(SUPER_ADMIN)
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+}
+model Tenant {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  ownerEmail String
+  status TenantStatus @default(ACTIVE)
+  planId String?
+  plan Plan? @relation(fields:[planId],references:[id])
+  subscription Subscription?
+  commissionOverride Decimal? @db.Decimal(5,2)
+  users TenantUser[]
+  gateways GatewayConfig[]
+  notices Notification[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model TenantUser {
+  id String @id @default(cuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade)
+  email String
+  passwordHash String
+  role String @default("TENANT_ADMIN")
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  @@unique([tenantId,email])
+  @@index([tenantId])
+}
+model Plan {
+  id String @id @default(cuid())
+  key String @unique
+  name String
+  description String
+  monthlyPriceNgn Int
+  active Boolean @default(true)
+  commissionPercent Decimal @default(0) @db.Decimal(5,2)
+  features Json
+  productLimit Int @default(100)
+  staffLimit Int @default(2)
+  aiCreditsMonthly Int @default(0)
+  automationLimit Int @default(0)
+  tenants Tenant[]
+  subscriptions Subscription[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model BillingPeriod {
+  id String @id @default(cuid())
+  key String @unique
+  label String
+  months Int
+  discountPercent Decimal @db.Decimal(5,2)
+}
+model Subscription {
+  id String @id @default(cuid())
+  tenantId String @unique
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade)
+  planId String
+  plan Plan @relation(fields:[planId],references:[id])
+  status SubscriptionStatus @default(TRIALING)
+  periodKey String @default("monthly")
+  startedAt DateTime @default(now())
+  expiresAt DateTime
+  lastReminder10At DateTime?
+  lastReminder3At DateTime?
+  expiredNoticeAt DateTime?
+  provider String?
+  providerSubscriptionId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status,expiresAt])
+}
+model GatewayConfig {
+  id String @id @default(cuid())
+  scope GatewayScope
+  tenantId String?
+  tenant Tenant? @relation(fields:[tenantId],references:[id],onDelete:Cascade)
+  provider GatewayProvider
+  label String
+  publicKey String?
+  encryptedSecret String?
+  encryptedWebhookSecret String?
+  customEndpoint String?
+  extraConfig Json?
+  enabled Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([scope,tenantId])
+}
+model Notification {
+  id String @id @default(cuid())
+  tenantId String
+  tenant Tenant @relation(fields:[tenantId],references:[id],onDelete:Cascade)
+  type String
+  title String
+  message String
+  channel NoticeChannel @default(IN_APP)
+  status NoticeStatus @default(PENDING)
+  sentAt DateTime?
+  createdAt DateTime @default(now())
+  @@unique([tenantId,type])
+  @@index([tenantId,createdAt])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  actorType String
+  actorId String?
+  action String
+  targetType String
+  targetId String?
+  details Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  @@index([targetType,targetId,createdAt])
+}
