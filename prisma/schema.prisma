@@ -1,13 +1,52 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
 
-enum PlatformRole { SUPER_ADMIN SUPPORT }
-enum TenantStatus { ACTIVE SUSPENDED DISABLED }
-enum SubscriptionStatus { TRIALING ACTIVE PAST_DUE EXPIRED CANCELLED }
-enum GatewayProvider { PAYSTACK STRIPE CUSTOM }
-enum GatewayScope { PLATFORM TENANT }
-enum NoticeChannel { IN_APP EMAIL }
-enum NoticeStatus { PENDING SENT FAILED }
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
+  SUPPORT
+}
+
+enum TenantStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  EXPIRED
+  CANCELLED
+}
+
+enum GatewayProvider {
+  PAYSTACK
+  STRIPE
+  CUSTOM
+}
+
+enum GatewayScope {
+  PLATFORM
+  TENANT
+}
+
+enum NoticeChannel {
+  IN_APP
+  EMAIL
+}
+
+enum NoticeStatus {
+  PENDING
+  SENT
+  FAILED
+}
 
 model PlatformUser {
   id String @id @default(cuid())
